@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Conferência de Carga</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600&family=Barlow+Condensed:wght@600;700&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<style>
+:root{--bg:#0d0d0d;--card:#1a1a1a;--ink:#f5f5f5;--mut:#a3a3a3;--line:#333;--y:#ffc400;--ok:#1b8a4b;--bad:#d32f2f;color-scheme:dark;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px);background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 Barlow,system-ui,sans-serif}
+header{background:#000;border-bottom:4px solid var(--y);padding:12px 14px}
+.wm{font:700 30px/1 'Barlow Condensed',sans-serif;letter-spacing:1.5px;color:var(--y)}
+.wm b{color:#fff;font-weight:700}
+header small{display:block;color:var(--mut);margin-top:3px}
+main{max-width:520px;margin:0 auto;padding:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:10px}
+input{width:100%;padding:11px;border:1px solid var(--line);border-radius:6px;background:#0d0d0d;color:var(--ink);font:inherit}
+button{font:600 16px Barlow,sans-serif;padding:12px 14px;border-radius:6px;border:1px solid #555;background:#262626;color:var(--ink);cursor:pointer}
+button.p{background:var(--y);color:#000;border-color:var(--y)}
+button:focus-visible,input:focus-visible{outline:3px solid var(--y);outline-offset:1px}
+.row{display:flex;gap:8px}.row>*{flex:1}
+#reader{width:100%;border-radius:6px;overflow:hidden;background:#000}
+#reader:empty{display:none}
+#cnt{font:700 110px/1 'Barlow Condensed',sans-serif;text-align:center;color:var(--y);font-variant-numeric:tabular-nums}
+#lbl{text-align:center;color:var(--mut);margin-top:2px}
+#msg{margin-top:8px;padding:10px;border-radius:6px;text-align:center;font-weight:600;background:#0d0d0d;color:var(--mut);min-height:42px}
+#msg.ok{background:var(--ok);color:#fff}#msg.bad{background:var(--bad);color:#fff}
+ul{list-style:none;margin:8px 0 0;padding:0;max-height:260px;overflow-y:auto}
+li{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid var(--line);font-size:15px}
+li span:first-child{overflow-wrap:anywhere}li span:last-child{color:var(--mut);white-space:nowrap}
+.empty{color:var(--mut);padding:8px 0}
+</style>
+</head>
+<body>
+<header><div class="wm">TORK <b>TOOLS</b></div><small>Conferência de carga</small></header>
+<main>
+
+<div class="card">
+  <input id="carga" placeholder="Caminhão / placa / transportadora" aria-label="Identificação da carga">
+</div>
+
+<div class="card">
+  <div id="reader"></div>
+  <div class="row" style="margin-top:8px">
+    <button class="p" id="btnCam">Iniciar câmera</button>
+    <button id="btnUndo">Desfazer último</button>
+  </div>
+  <div id="msg">Toque em “Iniciar câmera” e aponte para a etiqueta.</div>
+</div>
+
+<div class="card">
+  <div id="cnt">0</div>
+  <div id="lbl">pedidos no caminhão</div>
+</div>
+
+<div class="card">
+  <div class="row">
+    <input id="man" placeholder="Digitar código manualmente" aria-label="Código manual" inputmode="text">
+    <button id="btnAdd" style="flex:0 0 auto">Adicionar</button>
+  </div>
+  <ul id="list"></ul>
+</div>
+
+<div class="row">
+  <button id="btnCopy">Copiar lista</button>
+  <button id="btnNew">Nova carga</button>
+</div>
+</main>
+
+<script>
+(function(){
+  var KEY='conf-carga-v1', items=[], scanner=null, running=false, last={c:'',t:0};
+  var $=function(i){return document.getElementById(i)};
+
+  function load(){try{var s=JSON.parse(localStorage.getItem(KEY)||'null');if(s){items=s.items||[];$('carga').value=s.carga||''}}catch(e){}}
+  function save(){try{localStorage.setItem(KEY,JSON.stringify({items:items,carga:$('carga').value}))}catch(e){}}
+
+  function normalize(raw){
+    var t=String(raw).trim();
+    try{var j=JSON.parse(t);if(j&&j.id)return String(j.id)}catch(e){} // etiqueta Mercado Livre (QR em JSON)
+    return t;
+  }
+
+  function beep(ok){
+    try{
+      var a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();
+      o.type='square';o.frequency.value=ok?1000:220;g.gain.value=.15;o.connect(g);g.connect(a.destination);
+      o.start();o.stop(a.currentTime+(ok?.12:.4));
+    }catch(e){}
+    if(navigator.vibrate)navigator.vibrate(ok?60:[120,60,120]);
+  }
+
+  function say(text,cls){var m=$('msg');m.textContent=text;m.className=cls||''}
+
+  function render(){
+    $('cnt').textContent=items.length;
+    var ul=$('list');ul.innerHTML='';
+    if(!items.length){ul.innerHTML='<li class="empty">Nenhum pedido lido ainda.</li>';return}
+    items.slice().reverse().slice(0,100).forEach(function(it){
+      var li=document.createElement('li'),a=document.createElement('span'),b=document.createElement('span');
+      a.textContent=it.c;b.textContent=it.h;li.appendChild(a);li.appendChild(b);ul.appendChild(li);
+    });
+  }
+
+  function add(raw,fromCam){
+    var c=normalize(raw);if(!c)return;
+    var now=Date.now();
+    if(fromCam&&c===last.c&&now-last.t<3000){last.t=now;return} // leitura repetida seguida
+    last={c:c,t:now};
+    if(items.some(function(i){return i.c===c})){beep(false);say('JÁ LIDO: '+c,'bad');return}
+    items.push({c:c,h:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})});
+    save();render();beep(true);say('OK: '+c,'ok');
+  }
+
+  function startCam(){
+    if(typeof Html5Qrcode==='undefined'){say('Não foi possível carregar o leitor. Verifique a internet.','bad');return}
+    var F=Html5QrcodeSupportedFormats;
+    scanner=scanner||new Html5Qrcode('reader',{
+      formatsToSupport:[F.QR_CODE,F.CODE_128,F.CODE_39,F.CODE_93,F.EAN_13,F.EAN_8,F.UPC_A,F.ITF,F.DATA_MATRIX],
+      useBarCodeDetectorIfSupported:true,verbose:false});
+    scanner.start({facingMode:'environment'},{fps:12,qrbox:function(w){return{width:Math.floor(w*.85),height:Math.floor(w*.5)}}},
+      function(txt){add(txt,true)},function(){})
+    .then(function(){running=true;$('btnCam').textContent='Parar câmera';say('Câmera ligada. Aponte para a etiqueta.')})
+    .catch(function(){say('Sem acesso à câmera. Permita o uso da câmera e abra o link direto no navegador do celular.','bad')});
+  }
+  function stopCam(){
+    if(!scanner)return;
+    scanner.stop().then(function(){running=false;$('btnCam').textContent='Iniciar câmera';say('Câmera parada.')}).catch(function(){});
+  }
+
+  $('btnCam').onclick=function(){running?stopCam():startCam()};
+  $('btnAdd').onclick=function(){add($('man').value,false);$('man').value='';$('man').focus()};
+  $('man').onkeydown=function(e){if(e.key==='Enter')$('btnAdd').onclick()};
+  $('carga').oninput=save;
+  $('btnUndo').onclick=function(){
+    var x=items.pop();if(!x){say('Nada para desfazer.');return}
+    last={c:'',t:0};save();render();say('Removido: '+x.c);
+  };
+  $('btnCopy').onclick=function(){
+    var txt='Carga: '+($('carga').value||'-')+'\nTotal: '+items.length+'\n\n'+items.map(function(i){return i.c+'\t'+i.h}).join('\n');
+    function fb(){var t=document.createElement('textarea');t.value=txt;document.body.appendChild(t);t.select();try{document.execCommand('copy');say('Lista copiada.','ok')}catch(e){say('Não foi possível copiar.','bad')}document.body.removeChild(t)}
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(function(){say('Lista copiada.','ok')}).catch(fb);else fb();
+  };
+  $('btnNew').onclick=function(){
+    if(items.length&&!confirm('Zerar a contagem de '+items.length+' pedidos e iniciar nova carga?'))return;
+    items=[];$('carga').value='';last={c:'',t:0};save();render();say('Nova carga iniciada.');
+  };
+
+  load();render();
+})();
+</script>
+</body>
+</html>
