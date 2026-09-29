@@ -32,6 +32,11 @@ ul{list-style:none;margin:8px 0 0;padding:0;max-height:300px;overflow-y:auto}
 li{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid var(--line);font-size:15px}
 li span:first-child{overflow-wrap:anywhere}li span:last-child{color:var(--mut);white-space:nowrap}
 .empty{color:var(--mut);padding:8px 0}
+.sb{position:relative;margin-top:12px}
+.sb svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:18px;height:18px;stroke:var(--mut);fill:none;stroke-width:2;stroke-linecap:round;pointer-events:none}
+.sb input{padding-left:40px;padding-right:44px}
+#bx{position:absolute;right:4px;top:50%;transform:translateY(-50%);padding:4px 12px;font-size:22px;line-height:1;background:transparent;border:0;display:none}
+#lh{color:var(--mut);font-size:14px;margin-top:8px}
 </style>
 </head>
 <body>
@@ -52,6 +57,12 @@ li span:first-child{overflow-wrap:anywhere}li span:last-child{color:var(--mut);w
     <button id="btnUndo">Desfazer</button>
   </div>
   <div id="msg">Pronto: bipe a etiqueta com o leitor.</div>
+  <div class="sb">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+    <input id="busca" placeholder="Pesquisar pedido bipado" aria-label="Pesquisar pedido bipado" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <button id="bx" aria-label="Limpar pesquisa">×</button>
+  </div>
+  <div id="lh"></div>
   <ul id="list"></ul>
 </div>
 
@@ -84,9 +95,13 @@ li span:first-child{overflow-wrap:anywhere}li span:last-child{color:var(--mut);w
   function flash(ok){var e=$('cntcard');e.style.outline='6px solid '+(ok?'#1b8a4b':'#d32f2f');setTimeout(function(){e.style.outline=''},500)}
   function render(){
     $('cnt').textContent=items.length;
+    var q=$('busca').value.trim().toLowerCase();
+    $('bx').style.display=q?'block':'none';
     var ul=$('list');ul.innerHTML='';
-    if(!items.length){ul.innerHTML='<li class="empty">Nenhum pedido lido ainda.</li>';return}
-    items.slice().reverse().slice(0,100).forEach(function(it){
+    var res=(q?items.filter(function(it){return it.c.toLowerCase().indexOf(q)>-1}):items).slice().reverse();
+    $('lh').textContent=q?(res.length+' de '+items.length+' pedidos encontrados'):(items.length?'Últimos pedidos bipados':'');
+    if(!res.length){ul.innerHTML='<li class="empty">'+(q?'Nenhum pedido encontrado.':'Nenhum pedido lido ainda.')+'</li>';return}
+    res.slice(0,q?300:100).forEach(function(it){
       var li=document.createElement('li'),a=document.createElement('span'),b=document.createElement('span');
       a.textContent=it.c;b.textContent=it.h;li.appendChild(a);li.appendChild(b);ul.appendChild(li);
     });
@@ -126,14 +141,26 @@ li span:first-child{overflow-wrap:anywhere}li span:last-child{color:var(--mut);w
   // Se o foco se perder, qualquer tecla do leitor devolve o foco ao campo.
   document.addEventListener('keydown',function(e){
     var a=document.activeElement;
-    if(a===man||a===$('carga')||e.ctrlKey||e.metaKey||e.altKey)return;
+    if(a===man||a===$('carga')||a===$('busca')||e.ctrlKey||e.metaKey||e.altKey)return;
     focusMan();
   },true);
   man.addEventListener('blur',function(){setTimeout(function(){var a=document.activeElement;if(!a||a===document.body)focusMan()},150)});
   $('carga').addEventListener('blur',function(){setTimeout(function(){var a=document.activeElement;if(!a||a===document.body)focusMan()},150)});
-  document.addEventListener('click',function(e){if(e.target.id!=='carga')setTimeout(focusMan,50)});
+  $('busca').addEventListener('blur',function(){setTimeout(function(){var a=document.activeElement;if(!a||a===document.body)focusMan()},150)});
+  document.addEventListener('click',function(e){if(e.target.id!=='carga'&&e.target.id!=='busca')setTimeout(focusMan,50)});
   window.addEventListener('focus',focusMan);
 
+  // Lupa: filtra enquanto digita; Enter (ou bipar nela) diz se o pedido já foi bipado.
+  $('busca').addEventListener('input',render);
+  $('busca').addEventListener('keydown',function(e){
+    if(e.key!=='Enter'&&e.key!=='Tab')return;
+    e.preventDefault();
+    var v=normalize($('busca').value);if(!v)return;
+    $('busca').value=v;render();
+    var f=items.filter(function(i){return i.c===v})[0];
+    if(f)say('JÁ BIPADO às '+f.h+': '+v,'ok');else say('NÃO bipado: '+v,'bad');
+  });
+  $('bx').onclick=function(){$('busca').value='';render();focusMan()};
   $('btnAdd').onclick=commit;
   $('btnKb').onclick=function(){
     var off=man.getAttribute('inputmode')==='none';
@@ -152,7 +179,7 @@ li span:first-child{overflow-wrap:anywhere}li span:last-child{color:var(--mut);w
   };
   $('btnNew').onclick=function(){
     if(items.length&&!confirm('Zerar a contagem de '+items.length+' pedidos e iniciar nova carga?'))return;
-    items=[];$('carga').value='';last={c:'',t:0};save();render();say('Nova carga iniciada.');
+    items=[];$('carga').value='';$('busca').value='';last={c:'',t:0};save();render();say('Nova carga iniciada.');
   };
 
   load();render();focusMan();
