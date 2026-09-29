@@ -6,7 +6,6 @@
 <meta name="theme-color" content="#000000">
 <title>Conferência de Carga</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;600&family=Barlow+Condensed:wght@600;700&display=swap">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <style>
 :root{--bg:#0d0d0d;--card:#1a1a1a;--ink:#f5f5f5;--mut:#a3a3a3;--line:#333;--y:#ffc400;--ok:#1b8a4b;--bad:#d32f2f;color-scheme:dark;
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
@@ -15,22 +14,21 @@ html{scroll-padding-top:env(safe-area-inset-top,0px);background:var(--bg)}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 Barlow,system-ui,sans-serif}
 header{background:#000;border-bottom:4px solid var(--y);padding:12px 14px}
 .wm{font:700 30px/1 'Barlow Condensed',sans-serif;letter-spacing:1.5px;color:var(--y)}
-.wm b{color:#fff;font-weight:700}
+.wm b{color:#fff}
 header small{display:block;color:var(--mut);margin-top:3px}
 main{max-width:520px;margin:0 auto;padding:12px}
 .card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px;margin-bottom:10px}
-input{width:100%;padding:11px;border:1px solid var(--line);border-radius:6px;background:#0d0d0d;color:var(--ink);font:inherit}
+input{width:100%;padding:12px;border:1px solid var(--line);border-radius:6px;background:#0d0d0d;color:var(--ink);font:inherit}
+#man{border:2px solid var(--y);font-size:18px}
 button{font:600 16px Barlow,sans-serif;padding:12px 14px;border-radius:6px;border:1px solid #555;background:#262626;color:var(--ink);cursor:pointer}
 button.p{background:var(--y);color:#000;border-color:var(--y)}
 button:focus-visible,input:focus-visible{outline:3px solid var(--y);outline-offset:1px}
-.row{display:flex;gap:8px}.row>*{flex:1}
-#reader{width:100%;border-radius:6px;overflow:hidden;background:#000}
-#reader:empty{display:none}
-#cnt{font:700 84px/1 'Barlow Condensed',sans-serif;text-align:center;color:var(--y);font-variant-numeric:tabular-nums}
-#lbl{text-align:center;color:var(--mut);margin-top:2px}
-#msg{margin-top:8px;padding:10px;border-radius:6px;text-align:center;font-weight:600;background:#0d0d0d;color:var(--mut);min-height:42px}
+.row{display:flex;gap:8px;margin-top:8px}.row>*{flex:1}
+#cnt{font:700 96px/1 'Barlow Condensed',sans-serif;text-align:center;color:var(--y);font-variant-numeric:tabular-nums}
+#lbl{text-align:center;color:var(--mut)}
+#msg{margin-top:8px;padding:10px;border-radius:6px;text-align:center;font-weight:600;background:#0d0d0d;color:var(--mut);min-height:42px;overflow-wrap:anywhere}
 #msg.ok{background:var(--ok);color:#fff}#msg.bad{background:var(--bad);color:#fff}
-ul{list-style:none;margin:8px 0 0;padding:0;max-height:260px;overflow-y:auto}
+ul{list-style:none;margin:8px 0 0;padding:0;max-height:300px;overflow-y:auto}
 li{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid var(--line);font-size:15px}
 li span:first-child{overflow-wrap:anywhere}li span:last-child{color:var(--mut);white-space:nowrap}
 .empty{color:var(--mut);padding:8px 0}
@@ -39,32 +37,21 @@ li span:first-child{overflow-wrap:anywhere}li span:last-child{color:var(--mut);w
 <body>
 <header><div class="wm">TORK <b>TOOLS</b></div><small>Conferência de carga</small></header>
 <main>
+<div class="card"><input id="carga" placeholder="Caminhão / placa / transportadora" aria-label="Identificação da carga"></div>
 
-<div class="card">
-  <input id="carga" placeholder="Caminhão / placa / transportadora" aria-label="Identificação da carga">
-</div>
-
-<div class="card">
+<div class="card" id="cntcard">
   <div id="cnt">0</div>
   <div id="lbl">pedidos no caminhão</div>
 </div>
 
 <div class="card">
-  <div id="reader"></div>
-  <div class="row" style="margin-top:8px">
-    <button class="p" id="btnCam">Iniciar câmera</button>
-    <button id="btnUndo">Desfazer último</button>
-  </div>
-  <button id="btnPhoto" style="width:100%;margin-top:8px">Ler código por foto</button>
-  <input type="file" id="fileIn" accept="image/*" capture="environment" hidden>
-  <div id="msg">Toque em “Iniciar câmera” e aponte para a etiqueta.</div>
-</div>
-
-<div class="card">
+  <input id="man" placeholder="Bipe a etiqueta aqui" aria-label="Leitura do leitor" inputmode="none" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
   <div class="row">
-    <input id="man" placeholder="Digitar código manualmente" aria-label="Código manual" inputmode="text">
-    <button id="btnAdd" style="flex:0 0 auto">Adicionar</button>
+    <button class="p" id="btnAdd">Adicionar</button>
+    <button id="btnKb">Teclado</button>
+    <button id="btnUndo">Desfazer</button>
   </div>
+  <div id="msg">Pronto: bipe a etiqueta com o leitor.</div>
   <ul id="list"></ul>
 </div>
 
@@ -76,29 +63,25 @@ li span:first-child{overflow-wrap:anywhere}li span:last-child{color:var(--mut);w
 
 <script>
 (function(){
-  var KEY='conf-carga-v1', manual=false, items=[], scanner=null, running=false, last={c:'',t:0};
+  var KEY='conf-carga-v1',items=[],last={c:'',t:0},gaps=[],lastKey=0,idle=null;
   var $=function(i){return document.getElementById(i)};
+  var man=$('man');
 
   function load(){try{var s=JSON.parse(localStorage.getItem(KEY)||'null');if(s){items=s.items||[];$('carga').value=s.carga||''}}catch(e){}}
   function save(){try{localStorage.setItem(KEY,JSON.stringify({items:items,carga:$('carga').value}))}catch(e){}}
-
   function normalize(raw){
     var t=String(raw).trim();
-    try{var j=JSON.parse(t);if(j&&j.id)return String(j.id)}catch(e){} // etiqueta Mercado Livre (QR em JSON)
+    try{var j=JSON.parse(t);if(j&&j.id)return String(j.id)}catch(e){}
     return t;
   }
-
   function beep(ok){
-    try{
-      var a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();
+    try{var a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();
       o.type='square';o.frequency.value=ok?1000:220;g.gain.value=.15;o.connect(g);g.connect(a.destination);
-      o.start();o.stop(a.currentTime+(ok?.12:.4));
-    }catch(e){}
+      o.start();o.stop(a.currentTime+(ok?.12:.4))}catch(e){}
     if(navigator.vibrate)navigator.vibrate(ok?60:[120,60,120]);
   }
-
-  function say(text,cls){var m=$('msg');m.textContent=text;m.className=cls||''}
-
+  function say(t,c){var m=$('msg');m.textContent=t;m.className=c||''}
+  function flash(ok){var e=$('cntcard');e.style.outline='6px solid '+(ok?'#1b8a4b':'#d32f2f');setTimeout(function(){e.style.outline=''},500)}
   function render(){
     $('cnt').textContent=items.length;
     var ul=$('list');ul.innerHTML='';
@@ -108,52 +91,55 @@ li span:first-child{overflow-wrap:anywhere}li span:last-child{color:var(--mut);w
       a.textContent=it.c;b.textContent=it.h;li.appendChild(a);li.appendChild(b);ul.appendChild(li);
     });
   }
-
-  function flash(ok){var r=$('reader');r.style.outline='6px solid '+(ok?'#1b8a4b':'#d32f2f');setTimeout(function(){r.style.outline=''},450)}
-  function wake(){try{if(navigator.wakeLock)navigator.wakeLock.request('screen').catch(function(){})}catch(e){}}
-  function add(raw,fromCam){
+  function add(raw){
     var c=normalize(raw);if(!c)return;
     var now=Date.now();
-    if(fromCam&&c===last.c&&now-last.t<3000){last.t=now;return} // leitura repetida seguida
+    if(c===last.c&&now-last.t<1500){last.t=now;return}
     last={c:c,t:now};
     if(items.some(function(i){return i.c===c})){beep(false);flash(false);say('JÁ LIDO: '+c,'bad');return}
     items.push({c:c,h:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'})});
     save();render();beep(true);flash(true);say('OK: '+c,'ok');
   }
+  function commit(){
+    var v=man.value;man.value='';gaps=[];lastKey=0;clearTimeout(idle);
+    if(v.trim())add(v);
+  }
+  function focusMan(){man.focus()}
 
-  function getScanner(){
-    var F=Html5QrcodeSupportedFormats;
-    scanner=scanner||new Html5Qrcode('reader',{
-      formatsToSupport:[F.QR_CODE,F.CODE_128,F.CODE_39,F.CODE_93,F.EAN_13,F.EAN_8,F.UPC_A,F.ITF,F.DATA_MATRIX],
-      useBarCodeDetectorIfSupported:true,verbose:false});
-    return scanner;
-  }
-  function startCam(){
-    if(typeof Html5Qrcode==='undefined'){say('Não foi possível carregar o leitor. Verifique a internet.','bad');return}
-    getScanner().start({facingMode:'environment'},{fps:15,
-      videoConstraints:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080},advanced:[{focusMode:'continuous'}]}},
-      function(txt){add(txt,true)},function(){})
-    .then(function(){running=true;wake();$('btnCam').textContent='Parar câmera';say('Câmera ligada. Aponte para cada etiqueta, um pedido por vez.')})
-    .catch(function(){say('Sem acesso à câmera. Permita o uso da câmera no navegador.','bad')});
-  }
-  function readPhoto(f){
-    if(!f)return;
-    function go(){
-      getScanner().scanFile(f,false).then(function(t){add(t,false)})
-      .catch(function(){say('Não achei código na foto. Chegue mais perto e tire de novo.','bad')});
-    }
-    if(running){scanner.stop().then(function(){running=false;$('btnCam').textContent='Iniciar câmera';go()}).catch(go)}else go();
-  }
-  function stopCam(){
-    if(!scanner)return;
-    scanner.stop().then(function(){running=false;$('btnCam').textContent='Iniciar câmera';say('Câmera parada.')}).catch(function(){});
-  }
+  // Leitor USB = teclado: termina com Enter (ou Tab). Sem terminador, fecha sozinho após uma pausa.
+  man.addEventListener('keydown',function(e){
+    if(e.key==='Enter'||e.key==='Tab'){e.preventDefault();commit()}
+  });
+  man.addEventListener('input',function(){
+    var n=Date.now();
+    if(n-lastKey>500)gaps=[];
+    if(lastKey)gaps.push(n-lastKey);
+    lastKey=n;
+    say('Lendo: '+man.value);
+    clearTimeout(idle);
+    idle=setTimeout(function(){
+      var fast=gaps.length>=5&&Math.max.apply(null,gaps)<80;
+      if(man.value.length>=6&&fast)commit();
+    },250);
+  });
 
-  $('btnCam').onclick=function(){if(running){manual=true;stopCam()}else{manual=false;startCam()}};
-  $('btnPhoto').onclick=function(){$('fileIn').click()};
-  $('fileIn').onchange=function(){readPhoto(this.files[0]);this.value=''};
-  $('btnAdd').onclick=function(){add($('man').value,false);$('man').value='';$('man').focus()};
-  $('man').onkeydown=function(e){if(e.key==='Enter')$('btnAdd').onclick()};
+  // Se o foco se perder, qualquer tecla do leitor devolve o foco ao campo.
+  document.addEventListener('keydown',function(e){
+    var a=document.activeElement;
+    if(a===man||a===$('carga')||e.ctrlKey||e.metaKey||e.altKey)return;
+    focusMan();
+  },true);
+  man.addEventListener('blur',function(){setTimeout(function(){var a=document.activeElement;if(!a||a===document.body)focusMan()},150)});
+  $('carga').addEventListener('blur',function(){setTimeout(function(){var a=document.activeElement;if(!a||a===document.body)focusMan()},150)});
+  document.addEventListener('click',function(e){if(e.target.id!=='carga')setTimeout(focusMan,50)});
+  window.addEventListener('focus',focusMan);
+
+  $('btnAdd').onclick=commit;
+  $('btnKb').onclick=function(){
+    var off=man.getAttribute('inputmode')==='none';
+    man.setAttribute('inputmode',off?'text':'none');man.blur();setTimeout(focusMan,50);
+    say(off?'Teclado do celular ativado.':'Teclado oculto. Leitor pronto.');
+  };
   $('carga').oninput=save;
   $('btnUndo').onclick=function(){
     var x=items.pop();if(!x){say('Nada para desfazer.');return}
@@ -161,7 +147,7 @@ li span:first-child{overflow-wrap:anywhere}li span:last-child{color:var(--mut);w
   };
   $('btnCopy').onclick=function(){
     var txt='Carga: '+($('carga').value||'-')+'\nTotal: '+items.length+'\n\n'+items.map(function(i){return i.c+'\t'+i.h}).join('\n');
-    function fb(){var t=document.createElement('textarea');t.value=txt;document.body.appendChild(t);t.select();try{document.execCommand('copy');say('Lista copiada.','ok')}catch(e){say('Não foi possível copiar.','bad')}document.body.removeChild(t)}
+    function fb(){var t=document.createElement('textarea');t.value=txt;document.body.appendChild(t);t.select();try{document.execCommand('copy');say('Lista copiada.','ok')}catch(e){say('Não foi possível copiar.','bad')}document.body.removeChild(t);focusMan()}
     if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(function(){say('Lista copiada.','ok')}).catch(fb);else fb();
   };
   $('btnNew').onclick=function(){
@@ -169,12 +155,7 @@ li span:first-child{overflow-wrap:anywhere}li span:last-child{color:var(--mut);w
     items=[];$('carga').value='';last={c:'',t:0};save();render();say('Nova carga iniciada.');
   };
 
-  load();render();
-  setTimeout(startCam,400);
-  document.addEventListener('visibilitychange',function(){
-    if(document.hidden||manual||!scanner)return;
-    (running?scanner.stop().catch(function(){}):Promise.resolve()).then(function(){running=false;startCam()});
-  });
+  load();render();focusMan();
 })();
 </script>
 </body>
